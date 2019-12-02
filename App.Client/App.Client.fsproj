@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="src\Page.fs" />
+    <Compile Include="src\Services.fs" />
+    <Compile Include="src\Extensions.fs" />
+    <Compile Include="src\Components\CounterComponent.fs" />
+    <Compile Include="src\Components\DataComponent.fs" />
+    <Compile Include="src\Components\HomeComponent.fs" />
+    <Compile Include="src\Components\SignInComponent.fs" />
+    <Compile Include="src\Index.fs" />
+    <Compile Include="src\Startup.fs" />
+    <Compile Include="src\Program.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- 3.0.100 -->
+    <PackageReference Include="Bolero" Version="0.10.1-preview9" />
+    <PackageReference Include="Bolero.Build" Version="0.10.1-preview9" />
+    <PackageReference Include="Microsoft.AspNetCore.Blazor.Build" Version="3.0.0-preview9.19465.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Blazor.DevServer" Version="3.0.0-preview9.19465.2" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,7 @@
+.ionide/
+
+bin/
+obj/
+
+*.sq3
+

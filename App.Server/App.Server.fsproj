@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="src\AppDbContext.fs" />
+    <Compile Include="src\Extensions.fs" />
+    <Compile Include="src\Services\V1Service.fs" />
+    <Compile Include="src\Startup.fs" />
+    <Compile Include="src\Program.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- 3.0.100 -->
+    <ProjectReference Include="..\App.Client\App.Client.fsproj" />
+    <PackageReference Include="Bolero.Server" Version="0.10.1-preview9" />
+    <PackageReference Include="Microsoft.AspNetCore.Blazor.Server" Version="3.0.0-preview9.19465.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="3.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="3.0.0" />
+  </ItemGroup>
+</Project>

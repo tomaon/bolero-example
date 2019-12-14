@@ -1,5 +1,7 @@
 namespace App.Client
 
+open System.Timers
+
 open Elmish
 open Bolero
 open Bolero.Html
@@ -17,20 +19,18 @@ module Index =
     [<RequireQualifiedAccess>]
     type Msg =
         | SetPage of Page
-        | RecvHome of HomeComponent.Msg
-        | SendHome of unit
-        | RecvCounter of CounterComponent.Msg
-        | SendCounter of int
-        | RecvData of DataComponent.Msg
-        | SendData of Book []
+        | HomeComponentMsg of HomeComponent.Msg
+        | CounterComponentMsg of CounterComponent.Msg
+        | DataComponentMsg of DataComponent.Msg
         | RecvSignIn of SignInComponent.Msg
         | SendSignIn
         | RecvSignOut of unit
         | SendSignOut
-        | RecvGetUserName of string
+        | RecvGetUserName of Result<string, string>
         | SendGetUserName
         | RecvIgnore of exn
         | RecvError of exn
+        | ClearError
         | Error of string
 
 
@@ -42,6 +42,13 @@ module Index =
           SignIn: SignInComponent.Model option
           Name: string option
           Error: string option }
+
+
+    let private clearError (dispatch:Dispatch<Msg>) =
+        let timer = new Timer(2000.0)
+        timer.Elapsed.AddHandler (new ElapsedEventHandler (fun _ _ -> dispatch Msg.ClearError))
+        timer.AutoReset <- false
+        timer.Enabled <- true
 
 
     let private router =
@@ -64,22 +71,30 @@ module Index =
         | Msg.SetPage page ->
             let m =
                 match model.Page with
-                | Page.Home -> { model with Page = page; Home = None; SignIn = None }
-                | Page.Counter -> { model with Page = page; Counter = None; SignIn = None }
-                | Page.Data -> { model with Page = page; Data = None; SignIn = None }
-            let c =
-                match page with
-                | Page.Home -> Cmd.ofMsg (Msg.SendHome ())
-                | Page.Counter -> Cmd.ofMsg (Msg.SendCounter 0)
-                | Page.Data -> Cmd.ofAsync remoteProvider.V1.GetBooks () Msg.SendData Msg.RecvError
-            m, c
+                | Page.Home -> { model with Home = None; SignIn = None }
+                | Page.Counter -> { model with Counter = None; SignIn = None }
+                | Page.Data -> { model with Data = None; SignIn = None }
+            match page with
+            | Page.Home ->
+                let home, cmd = HomeComponent.init
+                { m with Page = page; Home = Some home }, Cmd.map Msg.HomeComponentMsg cmd
+            | Page.Counter ->
+                let counter, cmd = CounterComponent.init 0
+                { m with Page = page; Counter = Some counter }, Cmd.map Msg.CounterComponentMsg cmd
+            | Page.Data ->
+                let data, cmd = DataComponent.init
+                { m with Page = page; Data = Some data }, Cmd.map Msg.DataComponentMsg cmd
 
         | Msg.RecvSignIn inner ->
             match model.SignIn with
             | Some value ->
                 match inner with
+                | SignInComponent.Msg.RecvError ex ->
+                    model, Cmd.ofMsg (Msg.RecvError ex)
                 | SignInComponent.Msg.Ok name ->
-                    { model with Name = Some name }, Cmd.ofMsg (Msg.SetPage model.Page)
+                    { model with Name = Some name }, Cmd.ofMsg (Msg.SetPage model.Page) // reload
+                | SignInComponent.Msg.Error message ->
+                    model, Cmd.ofMsg (Msg.Error message)
                 | _ ->
                     let signIn, cmd = SignInComponent.update remoteProvider inner value
                     { model with SignIn = Some signIn }, Cmd.map Msg.RecvSignIn cmd
@@ -89,11 +104,13 @@ module Index =
             let signIn, cmd = SignInComponent.init ()
             { model with SignIn = Some signIn }, Cmd.map Msg.RecvSignIn cmd
         | Msg.RecvSignOut () ->
-            { model with Name = None }, Cmd.ofMsg (Msg.SetPage Page.Home)
+            { model with Name = None }, Cmd.ofMsg (Msg.SetPage Page.Home) // reload
         | Msg.SendSignOut ->
             model, Cmd.ofAsync remoteProvider.V1.SignOut () Msg.RecvSignOut Msg.RecvIgnore
-        | Msg.RecvGetUserName name ->
-            { model with Name = Some name }, Cmd.none
+        | Msg.RecvGetUserName result ->
+            match result with
+            | Ok name -> { model with Name = Some name }, Cmd.none
+            | Error message -> model, Cmd.ofMsg (Msg.Error message)
         | Msg.SendGetUserName ->
             model, Cmd.ofAsync remoteProvider.V1.GetUsername () Msg.RecvGetUserName Msg.RecvIgnore
 
@@ -104,54 +121,38 @@ module Index =
             then model, Cmd.ofMsg (Msg.SendSignIn)
             else model, Cmd.ofMsg (Msg.Error e.Message)
 
+        | Msg.ClearError ->
+            { model with Error = None }, Cmd.none
         | Msg.Error message ->
-            { model with Error = Some message }, Cmd.none
+            { model with Error = Some message }, Cmd.ofSub (clearError)
 
         | _ ->
             match model.Page with
-
             | Page.Home ->
-                match msg with
-                | Msg.RecvHome inner ->
-                    match model.Home with
-                    | Some value ->
-                        let home, cmd = HomeComponent.update remoteProvider inner value
-                        { model with Home = Some home }, Cmd.map Msg.RecvHome cmd
-                    | None ->
-                        model, Cmd.none
-                | Msg.SendHome args ->
-                    let home, cmd = HomeComponent.init args
-                    { model with Home = Some home }, Cmd.map Msg.RecvHome cmd
+                match msg, model.Home with
+                | Msg.HomeComponentMsg inner, Some value ->
+                    let home, cmd = HomeComponent.update remoteProvider inner value
+                    { model with Home = Some home }, Cmd.map Msg.HomeComponentMsg cmd
                 | _ ->
                     model, Cmd.none
-
             | Page.Counter ->
-                match msg with
-                | Msg.RecvCounter inner ->
-                    match model.Counter with
-                    | Some value ->
-                        let counter, cmd = CounterComponent.update remoteProvider inner value
-                        { model with Counter = Some counter }, Cmd.map Msg.RecvCounter cmd
-                    | None ->
-                        model, Cmd.none
-                | Msg.SendCounter args ->
-                    let counter, cmd = CounterComponent.init args
-                    { model with Counter = Some counter }, Cmd.map Msg.RecvCounter cmd
+                match msg, model.Counter with
+                | Msg.CounterComponentMsg inner, Some value ->
+                    let counter, cmd = CounterComponent.update remoteProvider inner value
+                    { model with Counter = Some counter }, Cmd.map Msg.CounterComponentMsg cmd
                 | _ ->
                     model, Cmd.none
-
             | Page.Data ->
-                match msg with
-                | Msg.RecvData inner ->
-                    match model.Data with
-                    | Some value ->
+                match msg, model.Data with
+                | Msg.DataComponentMsg inner, Some value ->
+                    match inner with
+                    | DataComponent.Msg.RecvError ex ->
+                        model, Cmd.ofMsg (Msg.RecvError ex)
+                    | DataComponent.Msg.Error message ->
+                        model, Cmd.ofMsg (Msg.Error message)
+                    | _ ->
                         let data, cmd = DataComponent.update remoteProvider inner value
-                        { model with Data = Some data }, Cmd.map Msg.RecvData cmd
-                    | None ->
-                        model, Cmd.none
-                | Msg.SendData args ->
-                    let data, cmd = DataComponent.init args
-                    { model with Data = Some data }, Cmd.map Msg.RecvData cmd
+                        { model with Data = Some data }, Cmd.map Msg.DataComponentMsg cmd
                 | _ ->
                     model, Cmd.none
 
@@ -205,27 +206,19 @@ module Index =
                             match model.Page with
                             | Page.Home ->
                                 match model.Home with
-                                | Some value ->
-                                    HomeComponent.view router value (Msg.RecvHome >> dispatch)
-                                | None ->
-                                    spinner
+                                | Some value -> HomeComponent.view router value (Msg.HomeComponentMsg >> dispatch)
+                                | None -> spinner
                             | Page.Counter ->
                                 match model.Counter with
-                                | Some value ->
-                                    CounterComponent.view router value (Msg.RecvCounter >> dispatch)
-                                | None ->
-                                    spinner
+                                | Some value -> CounterComponent.view router value (Msg.CounterComponentMsg >> dispatch)
+                                | None -> spinner
                             | Page.Data ->
                                 match model.Data with
-                                | Some value ->
-                                    DataComponent.view router value (Msg.RecvData >> dispatch)
-                                | None ->
-                                    spinner
+                                | Some value -> DataComponent.view router value (Msg.DataComponentMsg >> dispatch)
+                                | None -> spinner
                     cond model.Error <| function
-                        | Some value ->
-                            div [ "class" => "notification is-warning" ] [ text value ]
-                        | None ->
-                            empty
+                        | Some value -> div [ "class" => "notification is-warning" ] [ text value ]
+                        | None -> empty
                 ]
             ]
         ]

@@ -17,7 +17,7 @@ module HomeComponent =
     type Model = unit
 
 
-    let init () =
+    let init =
         (), Cmd.none
 
 

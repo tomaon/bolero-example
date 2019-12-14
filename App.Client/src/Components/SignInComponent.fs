@@ -24,37 +24,32 @@ module SignInComponent =
 
     type Model =
         { Username: string
-          Password: string
-          Error: string option }
+          Password: string }
 
 
     let init () =
         { Username = ""
-          Password = ""
-          Error = None }, Cmd.none
+          Password = "" }, Cmd.none
 
 
     let update (remoteProvider: IRemoteProvider) (msg: Msg) (model: Model) =
         match msg with
 
         | Msg.SetUsername value ->
-            { model with Username = value; Error = None }, Cmd.none
+            { model with Username = value }, Cmd.none
         | Msg.SetPassword value ->
-            { model with Password = value; Error = None }, Cmd.none
+            { model with Password = value }, Cmd.none
 
         | Msg.RecvSignIn result ->
             match result with
             | Ok value ->
                 model, Cmd.ofMsg (Msg.Ok value)
-            | Error value ->
-                { model with Error = Some value }, Cmd.none
+            | Error message ->
+                model, Cmd.ofMsg (Msg.Error message)
         | Msg.SendSignIn ->
-            { model with Error = None }, Cmd.ofAsync remoteProvider.V1.SignIn (model.Username, model.Password) Msg.RecvSignIn Msg.RecvError
+            model, Cmd.ofAsync remoteProvider.V1.SignIn (model.Username, model.Password) Msg.RecvSignIn Msg.RecvError
 
-        | Msg.RecvError e ->
-            model, Cmd.ofMsg (Msg.Error e.Message)
-
-        | Msg.Ok _ | Msg.Error _ ->
+        | Msg.RecvError _ | Msg.Ok _ | Msg.Error _ ->
             model, Cmd.none
 
 
@@ -79,10 +74,5 @@ module SignInComponent =
                         input [ "type" => "submit"; "class" => "button"; "value" => "Sign in" ]
                     ]
                 ]
-                cond model.Error <| function
-                    | Some value ->
-                        div [ "class" => "notification is-warning" ] [ text value ]
-                    | None ->
-                        empty
             ]
         ]

@@ -15,12 +15,12 @@ type V1Service(remoteContext: IRemoteContext) =
     let getBooks () =
         async {
             use dbContext = remoteContext.GetDbContext<AppDbContext>()
-            return [| for e in Book.FindAllAsNoTracking dbContext -> e |]
+            return Ok [| for e in Book.FindAllAsNoTracking dbContext -> e |]
         }
 
     let getUsername () =
         async {
-            return remoteContext.HttpContext.User.Identity.Name
+            return Ok remoteContext.HttpContext.User.Identity.Name
         }
 
     let signIn (username, password) =

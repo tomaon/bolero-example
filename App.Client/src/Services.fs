@@ -21,8 +21,8 @@ module Services =
 
     type V1Service =
         {
-            GetBooks: unit -> Async<Book[]>
-            GetUsername: unit -> Async<string>
+            GetBooks: unit -> Async<Result<Book[], string>>
+            GetUsername: unit -> Async<Result<string, string>>
             SignIn: string * string -> Async<Result<string, string>>
             SignOut: unit -> Async<unit>
         }

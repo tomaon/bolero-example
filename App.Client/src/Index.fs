@@ -85,6 +85,36 @@ module Index =
                 let data, cmd = DataComponent.init
                 { m with Page = page; Data = Some data }, Cmd.map Msg.DataComponentMsg cmd
 
+        | Msg.HomeComponentMsg inner ->
+            match model.Home with
+            | Some value ->
+                let home, cmd = HomeComponent.update remoteProvider inner value
+                { model with Home = Some home }, Cmd.map Msg.HomeComponentMsg cmd
+            | None ->
+                model, Cmd.none
+
+        | Msg.CounterComponentMsg inner ->
+            match model.Counter with
+            | Some value ->
+                let counter, cmd = CounterComponent.update remoteProvider inner value
+                { model with Counter = Some counter }, Cmd.map Msg.CounterComponentMsg cmd
+            | None ->
+                model, Cmd.none
+
+        | Msg.DataComponentMsg inner ->
+            match model.Data with
+            | Some value ->
+                match inner with
+                | DataComponent.Msg.RecvError ex ->
+                    model, Cmd.ofMsg (Msg.RecvError ex)
+                | DataComponent.Msg.Error message ->
+                    model, Cmd.ofMsg (Msg.Error message)
+                | _ ->
+                    let data, cmd = DataComponent.update remoteProvider inner value
+                    { model with Data = Some data }, Cmd.map Msg.DataComponentMsg cmd
+            | None ->
+                model, Cmd.none
+
         | Msg.RecvSignIn inner ->
             match model.SignIn with
             | Some value ->
@@ -116,45 +146,15 @@ module Index =
 
         | Msg.RecvIgnore _ ->
             model, Cmd.none
-        | Msg.RecvError e ->
-            if e = RemoteUnauthorizedException
+        | Msg.RecvError ex ->
+            if ex = RemoteUnauthorizedException
             then model, Cmd.ofMsg (Msg.SendSignIn)
-            else model, Cmd.ofMsg (Msg.Error e.Message)
+            else model, Cmd.ofMsg (Msg.Error ex.Message)
 
         | Msg.ClearError ->
             { model with Error = None }, Cmd.none
         | Msg.Error message ->
             { model with Error = Some message }, Cmd.ofSub (clearError)
-
-        | _ ->
-            match model.Page with
-            | Page.Home ->
-                match msg, model.Home with
-                | Msg.HomeComponentMsg inner, Some value ->
-                    let home, cmd = HomeComponent.update remoteProvider inner value
-                    { model with Home = Some home }, Cmd.map Msg.HomeComponentMsg cmd
-                | _ ->
-                    model, Cmd.none
-            | Page.Counter ->
-                match msg, model.Counter with
-                | Msg.CounterComponentMsg inner, Some value ->
-                    let counter, cmd = CounterComponent.update remoteProvider inner value
-                    { model with Counter = Some counter }, Cmd.map Msg.CounterComponentMsg cmd
-                | _ ->
-                    model, Cmd.none
-            | Page.Data ->
-                match msg, model.Data with
-                | Msg.DataComponentMsg inner, Some value ->
-                    match inner with
-                    | DataComponent.Msg.RecvError ex ->
-                        model, Cmd.ofMsg (Msg.RecvError ex)
-                    | DataComponent.Msg.Error message ->
-                        model, Cmd.ofMsg (Msg.Error message)
-                    | _ ->
-                        let data, cmd = DataComponent.update remoteProvider inner value
-                        { model with Data = Some data }, Cmd.map Msg.DataComponentMsg cmd
-                | _ ->
-                    model, Cmd.none
 
 
     let private menuItem model page str =

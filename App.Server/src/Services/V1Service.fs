@@ -14,8 +14,12 @@ type V1Service(remoteContext: IRemoteContext) =
 
     let getBooks () =
         async {
-            use dbContext = remoteContext.GetDbContext<AppDbContext>()
-            return Ok [| for e in Book.FindAllAsNoTracking dbContext -> e |]
+            try
+                use dbContext = remoteContext.GetDbContext<AppDbContext>()
+                return Ok [| for e in Book.FindAllAsNoTracking dbContext -> e |]
+            with
+            | ex ->
+                return Error ex.Message
         }
 
     let getUsername () =

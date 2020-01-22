@@ -60,13 +60,13 @@ module SignInComponent =
                 div [ "class" => "field" ] [
                     label [ "class" => "label" ] [ text "Username:" ]
                     div [ "class" => "control" ] [
-                        input [ "type" => "text"; "class" => "input"; bind.change model.Username (Msg.SetUsername >> dispatch) ]
+                        input [ "type" => "text"; "class" => "input"; bind.change.string model.Username (Msg.SetUsername >> dispatch) ]
                     ]
                 ]
                 div [ "class" => "field" ] [
                     label [ "class" => "label" ] [ text "Password:" ]
                     div [ "class" => "control" ] [
-                        input [ "type" => "password"; "class" => "input"; bind.change model.Password (Msg.SetPassword >> dispatch) ]
+                        input [ "type" => "password"; "class" => "input"; bind.change.string model.Password (Msg.SetPassword >> dispatch) ]
                     ]
                 ]
                 div [ "class" => "field" ] [

@@ -39,7 +39,7 @@ module CounterComponent =
             h1 [ "class" => "title" ] [ text "A simple counter" ]
             p [] [
                 button [ "class" => "button"; on.click (fun _ -> dispatch Msg.Decrement) ] [ text "-" ]
-                input [ "type" => "number"; "class" => "input"; bind.changeInt model.Value (Msg.SetCounter >> dispatch) ]
+                input [ "type" => "number"; "class" => "input"; bind.change.int model.Value (Msg.SetCounter >> dispatch) ]
                 button [ "class" => "button"; on.click (fun _ -> dispatch Msg.Increment) ] [ text "+" ]
             ]
             p [] [ textf "The counter's value is: %d" model.Value ]
